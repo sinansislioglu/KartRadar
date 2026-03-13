@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { useTheme } from '../theme';
+import { t } from '../i18n';
 
 const LEAGUES = [
   { id: 'tur.1', name: 'Süper Lig', threshold: 4, espnSlug: 'tur.1', flag: '🇹🇷' },
@@ -8,9 +9,9 @@ const LEAGUES = [
   { id: 'ita.1', name: 'Serie A', threshold: 5, espnSlug: 'ita.1', flag: '🇮🇹' },
   { id: 'ger.1', name: 'Bundesliga', threshold: 5, espnSlug: 'ger.1', flag: '🇩🇪' },
   { id: 'fra.1', name: 'Ligue 1', threshold: 3, espnSlug: 'fra.1', flag: '🇫🇷' },
-  { id: 'uefa.champions', name: 'Şampiyonlar Ligi', threshold: 3, espnSlug: 'uefa.champions', flag: '🏆' },
-  { id: 'uefa.europa', name: 'Avrupa Ligi', threshold: 3, espnSlug: 'uefa.europa', flag: '🏆' },
-  { id: 'uefa.europa.conf', name: 'Konferans Ligi', threshold: 3, espnSlug: 'uefa.europa.conf', flag: '🏆' },
+  { id: 'uefa.champions', name: t('league.championsLeague'), threshold: 3, espnSlug: 'uefa.champions', flag: '🏆' },
+  { id: 'uefa.europa', name: t('league.europaLeague'), threshold: 3, espnSlug: 'uefa.europa', flag: '🏆' },
+  { id: 'uefa.europa.conf', name: t('league.conferenceLeague'), threshold: 3, espnSlug: 'uefa.europa.conf', flag: '🏆' },
 ];
 
 function LeagueCard({ item, theme, onPress }) {
@@ -18,6 +19,8 @@ function LeagueCard({ item, theme, onPress }) {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      accessibilityLabel={`${item.name}, ${t('league.cardLimit', { n: item.threshold })}`}
+      accessibilityRole="button"
       style={[
         styles.card,
         {
@@ -35,7 +38,7 @@ function LeagueCard({ item, theme, onPress }) {
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: theme.badgeBg }]}>
               <Text style={[styles.badgeText, { color: theme.badgeText }]}>
-                {item.threshold} kart sınırı
+                {t('league.cardLimit', { n: item.threshold })}
               </Text>
             </View>
           </View>
@@ -60,20 +63,20 @@ export default function LeagueScreen({ navigation }) {
           <LeagueCard
             item={item}
             theme={theme}
-            onPress={() => navigation.navigate('Takımlar', { league: item })}
+            onPress={() => navigation.navigate('Teams', { league: item })}
           />
         )}
       />
       <View style={[styles.bottomBar, { borderTopColor: theme.cardBorder }]}>
         <TouchableOpacity onPress={() => navigation.navigate('Legal', { type: 'privacy' })}>
           <Text style={[styles.footerLink, { color: theme.textTertiary }]}>
-            Gizlilik Politikası
+            {t('league.privacyPolicy')}
           </Text>
         </TouchableOpacity>
         <Text style={[styles.footerDot, { color: theme.textTertiary }]}>·</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Legal', { type: 'terms' })}>
           <Text style={[styles.footerLink, { color: theme.textTertiary }]}>
-            Kullanım Koşulları
+            {t('league.termsOfUse')}
           </Text>
         </TouchableOpacity>
       </View>

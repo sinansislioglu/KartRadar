@@ -1,9 +1,17 @@
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../theme';
+import { t } from '../i18n';
 
 const ESPN_CORE = 'https://sports.core.api.espn.com/v2/sports/soccer/leagues';
 const ESPN_SITE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
+
+function getCurrentSeason() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return month >= 7 ? year : year - 1;
+}
 
 async function fetchCurrentRoster(teamId, espnSlug) {
   const res = await fetch(`${ESPN_SITE}/${espnSlug}/teams/${teamId}/roster`);
@@ -16,8 +24,9 @@ async function fetchCurrentRoster(teamId, espnSlug) {
 
 async function fetchCoreStats(espnSlug, playerId) {
   try {
+    const season = getCurrentSeason();
     const res = await fetch(
-      `${ESPN_CORE}/${espnSlug}/seasons/2025/types/1/athletes/${playerId}/statistics/0`
+      `${ESPN_CORE}/${espnSlug}/seasons/${season}/types/1/athletes/${playerId}/statistics/0`
     );
     const data = await res.json();
     let yc = 0, rc = 0;
@@ -36,8 +45,9 @@ async function fetchCoreStats(espnSlug, playerId) {
 }
 
 async function fetchFinishedMatchIds(teamId, espnSlug) {
+  const season = getCurrentSeason();
   const res = await fetch(
-    `${ESPN_SITE}/${espnSlug}/teams/${teamId}/schedule?season=2025`
+    `${ESPN_SITE}/${espnSlug}/teams/${teamId}/schedule?season=${season}`
   );
   const data = await res.json();
   return (data.events || [])
@@ -46,11 +56,20 @@ async function fetchFinishedMatchIds(teamId, espnSlug) {
     .map((e) => e.id);
 }
 
+async function fetchInBatches(items, fn, batchSize = 5) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 async function fetchDoubleYellowReds(matchIds, teamId, espnSlug) {
-  const summaryPromises = matchIds.map((id) =>
+  const summaries = await fetchInBatches(matchIds, (id) =>
     fetch(`${ESPN_SITE}/${espnSlug}/summary?event=${id}`).then((r) => r.json())
   );
-  const summaries = await Promise.all(summaryPromises);
   const playerCards = {};
 
   for (const summary of summaries) {
@@ -96,6 +115,7 @@ function PlayerCard({ item, threshold, theme }) {
 
   return (
     <View
+      accessibilityLabel={`${item.name}, ${t('players.cardCount', { y: item.yellow, max: threshold })}`}
       style={[
         styles.card,
         {
@@ -110,12 +130,12 @@ function PlayerCard({ item, threshold, theme }) {
         <View style={styles.playerInfo}>
           <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
           <Text style={[styles.cardCount, { color: theme.textSecondary }]}>
-            {item.yellow} / {threshold} kart
+            {t('players.cardCount', { y: item.yellow, max: threshold })}
           </Text>
         </View>
         <View style={[styles.warningBadge, { backgroundColor: theme.warningBg }]}>
           <Text style={[styles.warningText, { color: theme.warningText }]}>
-            1 kart = ceza
+            {t('players.oneCardPenalty')}
           </Text>
         </View>
       </View>
@@ -129,61 +149,80 @@ export default function PlayersScreen({ route }) {
   const theme = useTheme();
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [roster, matchIds] = await Promise.all([
-          fetchCurrentRoster(team.id, league.espnSlug),
-          fetchFinishedMatchIds(team.id, league.espnSlug),
-        ]);
+  const load = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) setRefreshing(true);
+      setError(false);
 
-        setMatchCount(matchIds.length);
+      const [roster, matchIds] = await Promise.all([
+        fetchCurrentRoster(team.id, league.espnSlug),
+        fetchFinishedMatchIds(team.id, league.espnSlug),
+      ]);
 
-        const [coreStatsResults, teamCards] = await Promise.all([
-          Promise.all(
-            roster.map(async (p) => ({
-              id: p.id,
-              stats: await fetchCoreStats(league.espnSlug, p.id),
-            }))
-          ),
-          fetchDoubleYellowReds(matchIds, team.id, league.espnSlug),
-        ]);
+      setMatchCount(matchIds.length);
 
-        const riskPlayers = [];
+      const [coreStatsResults, teamCards] = await Promise.all([
+        fetchInBatches(roster, async (p) => ({
+          id: p.id,
+          stats: await fetchCoreStats(league.espnSlug, p.id),
+        })),
+        fetchDoubleYellowReds(matchIds, team.id, league.espnSlug),
+      ]);
 
-        for (const player of roster) {
-          const core = coreStatsResults.find((c) => c.id === player.id)?.stats || { yc: 0, rc: 0 };
-          const tc = teamCards[player.id] || { doubleYellowReds: 0, directReds: 0, rawYC: 0 };
+      const riskPlayers = [];
 
-          const currentTeamRC = tc.doubleYellowReds + tc.directReds;
-          const previousRC = Math.max(0, core.rc - currentTeamRC);
-          const adjustedYC = core.yc - tc.doubleYellowReds - previousRC;
-          const currentAccumulation = adjustedYC > 0 ? adjustedYC % league.threshold : 0;
+      for (const player of roster) {
+        const core = coreStatsResults.find((c) => c.id === player.id)?.stats || { yc: 0, rc: 0 };
+        const tc = teamCards[player.id] || { doubleYellowReds: 0, directReds: 0, rawYC: 0 };
 
-          if (currentAccumulation === league.threshold - 1) {
-            riskPlayers.push({ ...player, yellow: currentAccumulation });
-          }
+        const currentTeamRC = tc.doubleYellowReds + tc.directReds;
+        const previousRC = Math.max(0, core.rc - currentTeamRC);
+        const adjustedYC = core.yc - tc.doubleYellowReds - previousRC;
+        const currentAccumulation = adjustedYC > 0 ? adjustedYC % league.threshold : 0;
+
+        if (currentAccumulation === league.threshold - 1) {
+          riskPlayers.push({ ...player, yellow: currentAccumulation });
         }
-
-        setPlayers(riskPlayers.sort((a, b) => a.name.localeCompare(b.name)));
-      } catch (err) {
-        console.error('Kart verisi çekilemedi:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
-  }, []);
+
+      setPlayers(riskPlayers.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [team.id, league.espnSlug, league.threshold]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.bg }]}>
         <ActivityIndicator size="large" color={theme.yellow} />
         <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-          Kart verileri yükleniyor...
+          {t('players.loading')}
         </Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.errorContainer, { backgroundColor: theme.bg }]}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={[styles.errorTitle, { color: theme.text }]}>{t('error.title')}</Text>
+        <Text style={[styles.errorSubtitle, { color: theme.textSecondary }]}>{t('error.subtitle')}</Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: theme.yellow }]}
+          onPress={() => { setLoading(true); load(); }}
+        >
+          <Text style={styles.retryText}>{t('error.retry')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -193,7 +232,7 @@ export default function PlayersScreen({ route }) {
       {matchCount > 0 && (
         <View style={[styles.infoBar, { backgroundColor: theme.infoBg, borderBottomColor: theme.infoBorder }]}>
           <Text style={[styles.infoText, { color: theme.infoText }]}>
-            {matchCount} maçtan hesaplandı
+            {t('players.matchCount', { n: matchCount })}
           </Text>
         </View>
       )}
@@ -201,9 +240,9 @@ export default function PlayersScreen({ route }) {
       {players.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>✅</Text>
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>Temiz!</Text>
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>{t('players.clean')}</Text>
           <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-            Kart sınırında oyuncu yok
+            {t('players.noPlayersAtLimit')}
           </Text>
         </View>
       ) : (
@@ -211,6 +250,10 @@ export default function PlayersScreen({ route }) {
           data={players}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
+          contentInsetAdjustmentBehavior="automatic"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.yellow} />
+          }
           renderItem={({ item }) => (
             <PlayerCard item={item} threshold={league.threshold} theme={theme} />
           )}
@@ -269,4 +312,10 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  errorIcon: { fontSize: 48, marginBottom: 12 },
+  errorTitle: { fontSize: 20, fontWeight: '700' },
+  errorSubtitle: { fontSize: 15, marginTop: 6, textAlign: 'center' },
+  retryButton: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
+  retryText: { fontSize: 15, fontWeight: '700', color: '#1C1C1E' },
 });

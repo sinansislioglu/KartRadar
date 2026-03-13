@@ -1,4 +1,4 @@
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,6 +6,7 @@ import LeagueScreen from './screens/LeagueScreen';
 import TeamScreen from './screens/TeamScreen';
 import PlayersScreen from './screens/PlayersScreen';
 import LegalScreen from './screens/LegalScreen';
+import { t } from './i18n';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,12 +58,21 @@ export default function App() {
     <NavigationContainer theme={isDark ? DarkNav : LightNav}>
       <Stack.Navigator screenOptions={screenOptions(isDark)}>
         <Stack.Screen
-          name="Ligler"
+          name="Leagues"
           component={LeagueScreen}
-          options={{ title: 'KartRadar' }}
+          options={{
+            title: t('nav.home'),
+            headerLeft: () => (
+              <Image
+                source={require('./assets/header-icon.png')}
+                style={{ width: 36, height: 36 }}
+                resizeMode="contain"
+              />
+            ),
+          }}
         />
-        <Stack.Screen name="Takımlar" component={TeamScreen} />
-        <Stack.Screen name="Oyuncular" component={PlayersScreen} />
+        <Stack.Screen name="Teams" component={TeamScreen} options={{ title: t('nav.teams') }} />
+        <Stack.Screen name="Players" component={PlayersScreen} options={{ title: t('nav.players') }} />
         <Stack.Screen name="Legal" component={LegalScreen} />
       </Stack.Navigator>
       <StatusBar style={isDark ? 'light' : 'dark'} />

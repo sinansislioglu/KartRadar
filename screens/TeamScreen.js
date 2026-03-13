@@ -1,10 +1,26 @@
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, Image } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, Image, RefreshControl } from 'react-native';
+import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../theme';
+import { t } from '../i18n';
+
+function getCurrentSeason() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return month >= 7 ? year : year - 1;
+}
+
+function getDateRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}${m}${d}-${y}1231`;
+}
 
 async function fetchActiveTeamIds(espnSlug) {
   const res = await fetch(
-    `https://site.api.espn.com/apis/site/v2/sports/soccer/${espnSlug}/scoreboard?dates=20260310-20261231`
+    `https://site.api.espn.com/apis/site/v2/sports/soccer/${espnSlug}/scoreboard?dates=${getDateRange()}`
   );
   const data = await res.json();
   const activeIds = new Set();
@@ -23,6 +39,8 @@ function TeamCard({ item, theme, onPress }) {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
+      accessibilityLabel={item.displayName}
+      accessibilityRole="button"
       style={[
         styles.card,
         {
@@ -51,39 +69,60 @@ export default function TeamScreen({ navigation, route }) {
   const theme = useTheme();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const teamsRes = await fetch(
-          `https://site.api.espn.com/apis/site/v2/sports/soccer/${league.espnSlug}/teams?season=2025`
-        );
-        const teamsData = await teamsRes.json();
-        let teamList =
-          teamsData.sports?.[0]?.leagues?.[0]?.teams?.map((t) => t.team) || [];
+  const load = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) setRefreshing(true);
+      setError(false);
+      const season = getCurrentSeason();
+      const teamsRes = await fetch(
+        `https://site.api.espn.com/apis/site/v2/sports/soccer/${league.espnSlug}/teams?season=${season}`
+      );
+      const teamsData = await teamsRes.json();
+      let teamList =
+        teamsData.sports?.[0]?.leagues?.[0]?.teams?.map((t) => t.team) || [];
 
-        const uefaTournaments = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
-        if (uefaTournaments.includes(league.espnSlug)) {
-          const activeIds = await fetchActiveTeamIds(league.espnSlug);
-          if (activeIds.size > 0) {
-            teamList = teamList.filter((t) => activeIds.has(String(t.id)));
-          }
+      const uefaTournaments = ['uefa.champions', 'uefa.europa', 'uefa.europa.conf'];
+      if (uefaTournaments.includes(league.espnSlug)) {
+        const activeIds = await fetchActiveTeamIds(league.espnSlug);
+        if (activeIds.size > 0) {
+          teamList = teamList.filter((t) => activeIds.has(String(t.id)));
         }
-
-        setTeams(teamList.sort((a, b) => a.displayName.localeCompare(b.displayName)));
-      } catch (err) {
-        console.error('Takımlar yüklenemedi:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-    load();
-  }, []);
+
+      setTeams(teamList.sort((a, b) => a.displayName.localeCompare(b.displayName)));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [league.espnSlug]);
+
+  useEffect(() => { load(); }, [load]);
 
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: theme.bg }]}>
         <ActivityIndicator size="large" color={theme.yellow} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.errorContainer, { backgroundColor: theme.bg }]}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={[styles.errorTitle, { color: theme.text }]}>{t('error.title')}</Text>
+        <Text style={[styles.errorSubtitle, { color: theme.textSecondary }]}>{t('error.subtitle')}</Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: theme.yellow }]}
+          onPress={() => { setLoading(true); load(); }}
+        >
+          <Text style={styles.retryText}>{t('error.retry')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -94,12 +133,15 @@ export default function TeamScreen({ navigation, route }) {
         data={teams}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.yellow} />
+        }
         renderItem={({ item }) => (
           <TeamCard
             item={item}
             theme={theme}
             onPress={() =>
-              navigation.navigate('Oyuncular', {
+              navigation.navigate('Players', {
                 team: { id: item.id, name: item.displayName, logo: item.logos?.[0]?.href },
                 league,
               })
@@ -133,4 +175,10 @@ const styles = StyleSheet.create({
   logoPlaceholder: { width: 36, height: 36, borderRadius: 8, marginRight: 14 },
   name: { flex: 1, fontSize: 16, fontWeight: '500', letterSpacing: -0.2 },
   chevron: { fontSize: 28, fontWeight: '300', marginLeft: 8 },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  errorIcon: { fontSize: 48, marginBottom: 12 },
+  errorTitle: { fontSize: 20, fontWeight: '700' },
+  errorSubtitle: { fontSize: 15, marginTop: 6, textAlign: 'center' },
+  retryButton: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
+  retryText: { fontSize: 15, fontWeight: '700', color: '#1C1C1E' },
 });
