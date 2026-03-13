@@ -1,0 +1,7 @@
+** BUILD FAILED **
+
+
+The following build commands failed:
+	PhaseScriptExecution [CP]\ Check\ Pods\ Manifest.lock /Users/sinansislioglu/Library/Developer/Xcode/DerivedData/KartRadar-acjbxtloejgicicxrhrvxstoyyzp/Build/Intermediates.noindex/KartRadar.build/Debug-iphonesimulator/KartRadar.build/Script-08A4A3CD28434E44B6B9DE2E.sh (in target 'KartRadar' from project 'KartRadar')
+	Building project KartRadar with scheme KartRadar and configuration Debug
+(2 failures)

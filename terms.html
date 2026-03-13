@@ -27,6 +27,11 @@
       color: #FFD60A;
       letter-spacing: -0.5px;
     }
+    .lang-tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+    .lang-tab { padding: 8px 20px; border-radius: 8px; border: 1px solid #2c2c3e; background: transparent; color: #8e8e93; font-weight: 600; font-size: 14px; cursor: pointer; }
+    .lang-tab.active { background: #FFD60A; color: #1C1C1E; border-color: #FFD60A; }
+    .lang-content { display: none; }
+    .lang-content.active { display: block; }
     h1 {
       font-size: 28px;
       font-weight: 800;
@@ -76,38 +81,136 @@
 <body>
   <div class="container">
     <div class="logo"><span>🟨 KartRadar</span></div>
-    <h1>Kullanım Koşulları</h1>
-    <p class="date">Son güncelleme: 13 Mart 2026</p>
 
-    <p>KartRadar uygulamasını ("Uygulama") kullanarak aşağıdaki koşulları kabul etmiş olursunuz.</p>
-
-    <h2>1. Hizmet Tanımı</h2>
-    <p>KartRadar, futbol liglerinde sarı kart sınırındaki oyuncuları takip eden bir bilgi uygulamasıdır. Veriler ESPN API'den alınmaktadır.</p>
-
-    <h2>2. Veri Doğruluğu</h2>
-    <p>Uygulama üçüncü taraf kaynaklardan veri çekmektedir. Verilerin %100 doğruluğu garanti edilmez. Bahis veya mali kararlar için kullanılmamalıdır.</p>
-
-    <h2>3. Kullanım Koşulları</h2>
-    <ul>
-      <li>Uygulamayı yalnızca kişisel ve ticari olmayan amaçlarla kullanabilirsiniz.</li>
-      <li>Uygulamayı kötüye kullanmak, tersine mühendislik yapmak yasaktır.</li>
-    </ul>
-
-    <h2>4. Sorumluluk Reddi</h2>
-    <p>Uygulama "olduğu gibi" sunulmaktadır. Veri hataları veya kesintilerden dolayı sorumluluk kabul edilmez.</p>
-
-    <h2>5. Fikri Mülkiyet</h2>
-    <p>KartRadar adı ve logosu uygulama sahibine aittir. Lig ve takım logoları ilgili kuruluşlara aittir.</p>
-
-    <h2>6. Değişiklikler</h2>
-    <p>Bu koşullar önceden bildirimde bulunmaksızın değiştirilebilir.</p>
-
-    <h2>7. İletişim</h2>
-    <p>Sorularınız için: <a href="mailto:kartradar.app@gmail.com">kartradar.app@gmail.com</a></p>
-
-    <div class="footer">
-      <p>&copy; 2026 KartRadar · <a href="privacy.html">Gizlilik Politikası</a></p>
+    <div class="lang-tabs">
+      <button class="lang-tab active" onclick="switchLang('tr')">TR</button>
+      <button class="lang-tab" onclick="switchLang('en')">EN</button>
+      <button class="lang-tab" onclick="switchLang('es')">ES</button>
     </div>
+
+    <!-- TR -->
+    <div id="content-tr" class="lang-content active">
+      <h1>Kullanım Koşulları</h1>
+      <p class="date">Son güncelleme: 13 Mart 2026</p>
+
+      <p>KartRadar uygulamasını ("Uygulama") kullanarak aşağıdaki koşulları kabul etmiş olursunuz.</p>
+
+      <h2>1. Hizmet Tanımı</h2>
+      <p>KartRadar, futbol liglerinde sarı kart sınırındaki oyuncuları takip eden bir bilgi uygulamasıdır. Veriler ESPN API'den alınmaktadır.</p>
+
+      <h2>2. Veri Doğruluğu</h2>
+      <p>Uygulama üçüncü taraf kaynaklardan veri çekmektedir. Verilerin %100 doğruluğu garanti edilmez. Bahis veya mali kararlar için kullanılmamalıdır.</p>
+
+      <h2>3. Kullanım Koşulları</h2>
+      <ul>
+        <li>Uygulamayı yalnızca kişisel ve ticari olmayan amaçlarla kullanabilirsiniz.</li>
+        <li>Uygulamayı kötüye kullanmak, tersine mühendislik yapmak yasaktır.</li>
+      </ul>
+
+      <h2>4. Sorumluluk Reddi</h2>
+      <p>Uygulama "olduğu gibi" sunulmaktadır. Veri hataları veya kesintilerden dolayı sorumluluk kabul edilmez.</p>
+
+      <h2>5. Fikri Mülkiyet</h2>
+      <p>KartRadar adı ve logosu uygulama sahibine aittir. Lig ve takım logoları ilgili kuruluşlara aittir.</p>
+
+      <h2>6. Değişiklikler</h2>
+      <p>Bu koşullar önceden bildirimde bulunmaksızın değiştirilebilir.</p>
+
+      <h2>7. İletişim</h2>
+      <p>Sorularınız için: <a href="mailto:kartradar.app@gmail.com">kartradar.app@gmail.com</a></p>
+
+      <div class="footer">
+        <p>&copy; 2026 KartRadar · <a href="privacy.html">Gizlilik Politikası</a></p>
+      </div>
+    </div>
+
+    <!-- EN -->
+    <div id="content-en" class="lang-content">
+      <h1>Terms of Use</h1>
+      <p class="date">Last updated: March 13, 2026</p>
+
+      <p>By using the KartRadar application ("App"), you agree to the following terms.</p>
+
+      <h2>1. Service Description</h2>
+      <p>KartRadar is an informational app that tracks players near the yellow card suspension threshold in football leagues. Data is sourced from the ESPN API.</p>
+
+      <h2>2. Data Accuracy</h2>
+      <p>The App retrieves data from third-party sources. 100% accuracy of the data is not guaranteed. It should not be used for betting or financial decisions.</p>
+
+      <h2>3. Terms of Use</h2>
+      <ul>
+        <li>You may only use the App for personal and non-commercial purposes.</li>
+        <li>Misuse of the App or reverse engineering is prohibited.</li>
+      </ul>
+
+      <h2>4. Disclaimer</h2>
+      <p>The App is provided "as is." No liability is accepted for data errors or service interruptions.</p>
+
+      <h2>5. Intellectual Property</h2>
+      <p>The KartRadar name and logo belong to the App owner. League and team logos belong to their respective organizations.</p>
+
+      <h2>6. Changes</h2>
+      <p>These terms may be changed without prior notice.</p>
+
+      <h2>7. Contact</h2>
+      <p>For questions: <a href="mailto:kartradar.app@gmail.com">kartradar.app@gmail.com</a></p>
+
+      <div class="footer">
+        <p>&copy; 2026 KartRadar · <a href="privacy.html">Privacy Policy</a></p>
+      </div>
+    </div>
+
+    <!-- ES -->
+    <div id="content-es" class="lang-content">
+      <h1>Términos de Uso</h1>
+      <p class="date">Última actualización: 13 de marzo de 2026</p>
+
+      <p>Al utilizar la aplicación KartRadar ("Aplicación"), usted acepta los siguientes términos.</p>
+
+      <h2>1. Descripción del Servicio</h2>
+      <p>KartRadar es una aplicación informativa que realiza el seguimiento de jugadores cercanos al límite de suspensión por tarjetas amarillas en ligas de fútbol. Los datos se obtienen de la API de ESPN.</p>
+
+      <h2>2. Exactitud de los Datos</h2>
+      <p>La Aplicación obtiene datos de fuentes de terceros. No se garantiza la exactitud al 100% de los datos. No debe utilizarse para apuestas ni decisiones financieras.</p>
+
+      <h2>3. Condiciones de Uso</h2>
+      <ul>
+        <li>Solo puede utilizar la Aplicación con fines personales y no comerciales.</li>
+        <li>Está prohibido el uso indebido de la Aplicación o la ingeniería inversa.</li>
+      </ul>
+
+      <h2>4. Exención de Responsabilidad</h2>
+      <p>La Aplicación se proporciona "tal cual." No se acepta responsabilidad por errores en los datos o interrupciones del servicio.</p>
+
+      <h2>5. Propiedad Intelectual</h2>
+      <p>El nombre y el logotipo de KartRadar pertenecen al propietario de la Aplicación. Los logotipos de ligas y equipos pertenecen a sus respectivas organizaciones.</p>
+
+      <h2>6. Cambios</h2>
+      <p>Estos términos pueden modificarse sin previo aviso.</p>
+
+      <h2>7. Contacto</h2>
+      <p>Para consultas: <a href="mailto:kartradar.app@gmail.com">kartradar.app@gmail.com</a></p>
+
+      <div class="footer">
+        <p>&copy; 2026 KartRadar · <a href="privacy.html">Política de Privacidad</a></p>
+      </div>
+    </div>
+
   </div>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.lang-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.lang-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById('content-' + lang).classList.add('active');
+      document.querySelector('.lang-tab[onclick="switchLang(\'' + lang + '\')"]').classList.add('active');
+    }
+    (function() {
+      var userLang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+      if (userLang.startsWith('tr')) switchLang('tr');
+      else if (userLang.startsWith('es')) switchLang('es');
+      else switchLang('en');
+    })();
+  </script>
 </body>
 </html>
